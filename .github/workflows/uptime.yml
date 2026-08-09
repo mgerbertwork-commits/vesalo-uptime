@@ -1,0 +1,47 @@
+name: Uptime
+
+on:
+  # Alle 5 Minuten — das ist die feinste Auflösung, die GitHub anbietet.
+  # Dieses Repo ist öffentlich, dort sind Actions-Minuten auf Standard-Runnern
+  # kostenlos. Das Minuten-Budget des privaten Hauptrepos (E2E!) wird also
+  # NICHT angetastet. GitHub führt geplante Läufe „best effort" aus; unter Last
+  # kann ein Lauf ausfallen oder sich verschieben.
+  schedule:
+    - cron: '*/5 * * * *'
+  # Selbsttest und Nachprüfung von Hand.
+  workflow_dispatch:
+    inputs:
+      force_fail:
+        description: 'Selbsttest — zusätzliches, absichtlich fehlschlagendes Ziel prüfen (löst einen echten Alarm samt Mail aus)'
+        type: boolean
+        default: false
+
+# Läufe dürfen sich nicht überholen; ein laufender Check wird NICHT abgebrochen,
+# sonst verlieren wir womöglich genau den Lauf, der den Ausfall meldet.
+concurrency:
+  group: uptime
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    # Worst case: 3 Versuche × 20 s Timeout + 2 × 20 s Pause ≈ 100 s.
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Ziele prüfen
+        run: node monitor.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERT_TO: ${{ secrets.ALERT_TO }}
+          ALERT_FROM: ${{ secrets.ALERT_FROM }}
+          WEBHOOK_PROBE_URL: ${{ secrets.WEBHOOK_PROBE_URL }}
+          FORCE_FAIL: ${{ inputs.force_fail && '1' || '' }}
