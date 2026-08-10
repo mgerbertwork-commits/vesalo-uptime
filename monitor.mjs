@@ -93,6 +93,38 @@ const TARGETS = [
     expect: (r) => r.status === 401 && /invalid credentials/i.test(r.body),
     expectText: 'HTTP 401 mit erwarteter Abweisung (Route lebt)',
   },
+  {
+    key: 'kontaktformular',
+    name: 'Kontaktformular — darf www.vesalo.de absenden?',
+    method: 'OPTIONS',
+    url: 'https://api.vesalo.de/api/leads',
+    headers: {
+      origin: 'https://www.vesalo.de',
+      'access-control-request-method': 'POST',
+      'access-control-request-headers': 'content-type',
+    },
+    // 🔴 Warum es dieses Ziel gibt: am 2026-08-10 stand CORS_ORIGINS in
+    // Produktion auf ausschliesslich https://app.vesalo.de. Der
+    // Same-Origin-Guard der API hat damit JEDE Absendung von der
+    // Marketing-Domain mit 403 abgewiesen — das Kontaktformular war tot.
+    // Rund 90 Tage lang, unbemerkt.
+    //
+    // Und zwar unbemerkbar fuer jeden bisherigen Waechter: www lieferte
+    // brav HTTP 200 mit HTML, die API meldete status:"ok". Beide gesund,
+    // die wichtigste Funktion der Website trotzdem kaputt. Genau dieselbe
+    // Fehlerklasse wie beim wochenlang toten api.vesalo.de.
+    //
+    // Der Preflight fragt die API in der Sprache des Browsers: "darf
+    // www.vesalo.de bei dir absenden?" Fehlt der Allow-Origin-Header,
+    // kann das Formular nicht funktionieren — egal wie gesund alles wirkt.
+    expect: (r) => {
+      if (r.status < 200 || r.status >= 400) return false;
+      const allow = r.headers?.get?.('access-control-allow-origin') ?? '';
+      return allow === 'https://www.vesalo.de' || allow === '*';
+    },
+    expectText:
+      'Preflight mit Access-Control-Allow-Origin fuer https://www.vesalo.de',
+  },
 ];
 
 // Selbsttest: ein absichtlich fehlschlagendes Zusatzziel. Erzeugt einen echten
@@ -128,12 +160,20 @@ async function probe(t) {
     const res = await fetch(t.url, {
       method: t.method,
       redirect: 'manual',
-      headers: t.method === 'POST' ? { 'content-type': 'application/json' } : {},
+      headers: {
+        ...(t.method === 'POST' ? { 'content-type': 'application/json' } : {}),
+        // Ziel-eigene Header — der CORS-Preflight braucht Origin und die
+        // Access-Control-Request-*-Angaben, sonst antwortet die API gar nicht
+        // als Preflight.
+        ...(t.headers || {}),
+      },
       body: t.method === 'POST' ? '{}' : undefined,
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     const body = await res.text().catch(() => '');
-    const ok = t.expect({ status: res.status, body });
+    // `headers` mitgeben: manche Ziele beweisen ihre Gesundheit nicht am
+    // Body, sondern an einem Antwort-Header (CORS).
+    const ok = t.expect({ status: res.status, body, headers: res.headers });
     return {
       ok,
       ms: Date.now() - started,
