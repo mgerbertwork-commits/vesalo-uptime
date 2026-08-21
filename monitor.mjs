@@ -538,7 +538,7 @@ async function main() {
       body: JSON.stringify({ state: 'closed', state_reason: 'completed' }),
     });
     await sendMail(
-      `✅ Vesalo wieder erreichbar`,
+      `✅ Vesalo wieder unauffaellig`,
       mailHtml(
         'Entwarnung — alle Ziele antworten wieder',
         mailRows,
