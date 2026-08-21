@@ -67,3 +67,43 @@ Minuten-Budget des privaten Hauptrepos bleibt unangetastet.
 
 `keepalive.yml` schreibt einmal im Monat ein Lebenszeichen, weil GitHub geplante
 Workflows in inaktiven Repos nach 60 Tagen abschaltet.
+
+---
+
+## Immospur (der Immobilienfinder) — seit 21.08.2026
+
+Vier zusaetzliche Ziele. Sie brauchen drei Secrets: `IMMOSPUR_URL`,
+`IMMOSPUR_BENUTZER`, `IMMOSPUR_PASSWORT`.
+
+🔴 **Adresse und Zugangsdaten stehen NICHT im Code.** Immospur laeuft unter
+einer nicht beworbenen Adresse mit Zugangsabfrage; dieses Repository ist
+oeffentlich. Sie hier hinzuschreiben hiesse, die Adresse mit dem eigenen
+Waechter zu bewerben. `redact()` ersetzt sie zusaetzlich in Issues und Mails.
+
+| Ziel | gesund ist | warum |
+|---|---|---|
+| `immospur-schutz` | **401** mit `WWW-Authenticate` | Bei einer geschuetzten Adresse waere **200** der Alarm. Ein Waechter, der nur auf 200 prueft, schluege dauernd Alarm; einer, der nur „antwortet ueberhaupt" prueft, saehe einen weggefallenen Schutz nicht. |
+| `immospur-web` | 200 + Marke im Body | Gegenrichtung: hinter der Abfrage muss wirklich die Website stehen. Ein 401 fuer ALLE waere sonst „gruen". |
+| `immospur-api` | 200 + `status:"ok"` + **40-stelliger Commit** | Der Deploy-Pin. „unbekannt" hiesse: das Image weiss nicht, was in ihm steckt. |
+| `immospur-webhook` | **401 OHNE** `WWW-Authenticate` | Zwei gleiche Zahlen, zwei verschiedene Dinge: hier ist es die Signaturpruefung. Steckte hier die Zugangsabfrage, kaeme keine Bounce-Meldung je an — und die Sperrliste bliebe fuer immer leer. |
+
+### Uebersprungen ist nicht gruen
+
+Fehlen die Secrets, werden diese Ziele ausgelassen — und das steht **sichtbar
+in der Lauf-Zusammenfassung**, nicht nur in einer Konsolenzeile, die bei einem
+gruenen Lauf niemand aufklappt. Ein Waechter, der ein Ziel gar nicht mehr
+prueft, ist sonst von einem, bei dem das Ziel gesund ist, nicht zu
+unterscheiden.
+
+### In der Ernstfall-Lage gemessen (21.08.2026)
+
+Dieselben Ziele gegen eine **ungeschuetzte** Adresse gerichtet:
+
+```
+FEHL immospur-schutz   HTTP 200 — erwartet: HTTP 401 mit WWW-Authenticate
+FEHL immospur-web      HTTP 200 — erwartet: HTTP 200 und die Marke im Body
+FEHL immospur-api      HTTP 200 — erwartet: … und ein echter 40-stelliger Commit
+```
+
+Der Schutz-Waechter schlaegt also an, wenn der Schutz fehlt. Ohne diese Probe
+waere „immer gruen" von „kann gar nicht rot werden" nicht zu unterscheiden.

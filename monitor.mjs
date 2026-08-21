@@ -39,6 +39,20 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const ALERT_TO = process.env.ALERT_TO || '';
 const ALERT_FROM = process.env.ALERT_FROM || '';
 const WEBHOOK_PROBE_URL = process.env.WEBHOOK_PROBE_URL || '';
+// ─── Immospur (der Immobilienfinder) ────────────────────────────────────────
+// 🔴 ADRESSE UND ZUGANGSDATEN STEHEN IN SECRETS, NICHT IM CODE.
+// Dieses Repository ist OEFFENTLICH. Eine nicht beworbene Adresse hier
+// hinzuschreiben hiesse, sie mit dem eigenen Waechter zu bewerben — und die
+// Zugangsdaten gleich mit. Sie erscheinen deshalb auch in keinem Issue und
+// in keiner Mail (siehe `redact`).
+const IMMOSPUR_URL = (process.env.IMMOSPUR_URL || '').replace(/\/+$/, '');
+const IMMOSPUR_BENUTZER = process.env.IMMOSPUR_BENUTZER || '';
+const IMMOSPUR_PASSWORT = process.env.IMMOSPUR_PASSWORT || '';
+const IMMOSPUR_AUTH =
+  IMMOSPUR_BENUTZER && IMMOSPUR_PASSWORT
+    ? 'Basic ' + Buffer.from(`${IMMOSPUR_BENUTZER}:${IMMOSPUR_PASSWORT}`).toString('base64')
+    : '';
+const IMMOSPUR_BEREIT = Boolean(IMMOSPUR_URL && IMMOSPUR_AUTH);
 const FORCE_FAIL = process.env.FORCE_FAIL === '1';
 // Trockenlauf: prueft die Ziele wirklich, schreibt aber weder Issue noch Mail.
 // Nur fuer lokales Nachpruefen — im Workflow nie gesetzt.
@@ -125,6 +139,83 @@ const TARGETS = [
     expectText:
       'Preflight mit Access-Control-Allow-Origin fuer https://www.vesalo.de',
   },
+  // ══════════════════════════════════════════════════════════════════════
+  //  Immospur — die geschuetzte Installation
+  // ══════════════════════════════════════════════════════════════════════
+  //
+  // 🔴 VIER ZIELE, WEIL DREI LEHREN AUS VESALO DARIN STECKEN:
+  //
+  //  (a) „Der Status luegt." Bei einer zugangsgeschuetzten Adresse ist 401
+  //      das GESUNDE Ergebnis fuer einen Fremden — und 200 waere der Alarm.
+  //      Ein Waechter, der nur auf 200 prueft, schluege hier dauernd Alarm;
+  //      einer, der nur „antwortet ueberhaupt" prueft, saehe einen
+  //      weggefallenen Schutz nicht. Deshalb BEIDE Richtungen.
+  //
+  //  (b) „Zwei gleiche Zahlen, zwei verschiedene Dinge." Der Mail-Webhook
+  //      antwortet ebenfalls mit 401 — aber aus einem anderen Grund
+  //      (ungueltige Signatur). Unterschieden werden sie am
+  //      `WWW-Authenticate`-Kopf: den setzt nur die Zugangsabfrage. Ohne
+  //      diese Unterscheidung waere ein versehentlich mitgeschuetzter
+  //      Webhook nicht von einem gesunden zu unterscheiden — und jede
+  //      Bounce-Meldung fiele still auf den Boden.
+  //
+  //  (c) „Uebersprungen ist nicht gruen." Fehlt die Konfiguration, werden
+  //      diese Ziele ausgelassen — und das wird am Ende SICHTBAR gemeldet
+  //      (Lauf-Zusammenfassung), nicht nur in eine Konsolenzeile geschrieben,
+  //      die niemand liest.
+  {
+    key: 'immospur-schutz',
+    name: 'Immospur — Zugriffsschutz (ohne Zugangsdaten)',
+    method: 'GET',
+    url: `${IMMOSPUR_URL}/`,
+    skipIf: () => !IMMOSPUR_BEREIT,
+    // 401 MIT WWW-Authenticate: die Abfrage steht. 200 hiesse, sie ist weg.
+    expect: (r) =>
+      r.status === 401 && /Basic/i.test(r.headers?.get?.('www-authenticate') ?? ''),
+    expectText: 'HTTP 401 mit WWW-Authenticate (der Schutz steht)',
+  },
+  {
+    key: 'immospur-web',
+    name: 'Immospur — Website (mit Zugangsdaten)',
+    method: 'GET',
+    url: `${IMMOSPUR_URL}/`,
+    skipIf: () => !IMMOSPUR_BEREIT,
+    headers: { authorization: IMMOSPUR_AUTH },
+    // Gegenrichtung zu `immospur-schutz`: hinter der Abfrage muss wirklich
+    // die Website stehen. Ein 401 fuer ALLE waere sonst „gruen".
+    expect: (r) => r.status === 200 && /Immospur/.test(r.body),
+    expectText: 'HTTP 200 und die Marke im Body',
+  },
+  {
+    key: 'immospur-api',
+    name: 'Immospur — API und Deploy-Pin',
+    method: 'GET',
+    url: `${IMMOSPUR_URL}/api/health`,
+    skipIf: () => !IMMOSPUR_BEREIT,
+    headers: { authorization: IMMOSPUR_AUTH },
+    // Der Commit muss ein echter sein. „unbekannt" hiesse: das Image weiss
+    // nicht, was in ihm steckt — dann ist auch kein Deploy mehr nachweisbar.
+    expect: (r) =>
+      r.status === 200 &&
+      /"status"\s*:\s*"ok"/.test(r.body) &&
+      /"commit"\s*:\s*"[0-9a-f]{40}"/.test(r.body),
+    expectText: 'HTTP 200, status:"ok" und ein echter 40-stelliger Commit',
+  },
+  {
+    key: 'immospur-webhook',
+    name: 'Immospur — Mail-Webhook (muss OHNE Zugangsdaten erreichbar sein)',
+    method: 'POST',
+    url: `${IMMOSPUR_URL}/api/immobilienfinder/mail-ereignis`,
+    skipIf: () => !IMMOSPUR_BEREIT,
+    // 🔴 Absichtlich OHNE `authorization` — genau so kommt Resend an.
+    expect: (r) => {
+      const zugangsabfrage = /Basic/i.test(r.headers?.get?.('www-authenticate') ?? '');
+      // Gesund: 401 der SIGNATURPRUEFUNG. Krank: 401 der Zugangsabfrage
+      // (dann kaeme keine Bounce-Meldung je an), 404 (Route weg) oder 5xx.
+      return r.status === 401 && !zugangsabfrage;
+    },
+    expectText: 'HTTP 401 der Signaturpruefung (ohne WWW-Authenticate)',
+  },
 ];
 
 // Selbsttest: ein absichtlich fehlschlagendes Zusatzziel. Erzeugt einen echten
@@ -147,6 +238,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 function redact(s) {
   let out = String(s ?? '');
   if (WEBHOOK_PROBE_URL) out = out.split(WEBHOOK_PROBE_URL).join('<webhook-url>');
+  // 🔴 Auch die Immospur-Adresse und ihr Passwort — dieses Repo ist
+  // oeffentlich, und Issues wie Mails entstehen aus diesen Texten.
+  if (IMMOSPUR_URL) out = out.split(IMMOSPUR_URL).join('<immospur-url>');
+  if (IMMOSPUR_PASSWORT) out = out.split(IMMOSPUR_PASSWORT).join('<passwort>');
+  if (IMMOSPUR_AUTH) out = out.split(IMMOSPUR_AUTH).join('<zugangsdaten>');
   return out;
 }
 
@@ -182,6 +278,21 @@ async function probe(t) {
   } catch (e) {
     return { ok: false, ms: Date.now() - started, detail: redact(`${e.name}: ${e.message}`) };
   }
+}
+
+/**
+ * Schreibt in die Lauf-Zusammenfassung, die GitHub oben an den Workflow-Lauf
+ * heftet. Ohne sie bliebe jede Nebenbemerkung im Protokoll liegen, das man
+ * erst aufklappen muss — und bei einem gruenen Lauf klappt es niemand auf.
+ */
+async function schreibeZusammenfassung(text) {
+  const ziel = process.env.GITHUB_STEP_SUMMARY;
+  if (!ziel) {
+    console.log(text);
+    return;
+  }
+  const { appendFile } = await import('node:fs/promises');
+  await appendFile(ziel, redact(text) + '\n');
 }
 
 // ─── GitHub-API ──────────────────────────────────────────────────────────────
@@ -270,8 +381,37 @@ function mailHtml(headline, rows, footer) {
 // ─── Hauptlauf ───────────────────────────────────────────────────────────────
 async function main() {
   const active = TARGETS.filter((t) => !(t.skipIf && t.skipIf()));
-  for (const t of TARGETS) {
-    if (t.skipIf && t.skipIf()) console.warn(`!! Ziel "${t.key}" uebersprungen — kein WEBHOOK_PROBE_URL gesetzt.`);
+  const uebersprungen = TARGETS.filter((t) => t.skipIf && t.skipIf());
+
+  // ══════════════════════════════════════════════════════════════════════
+  // 🔴 UEBERSPRUNGEN IST NICHT GRUEN.
+  //
+  // Vorher stand hier nur ein `console.warn`. Eine Warnzeile in einem Lauf,
+  // der gruen endet, liest niemand — und ein Waechter, der ein Ziel gar
+  // nicht mehr prueft, ist von einem, bei dem das Ziel gesund ist, nicht zu
+  // unterscheiden. Genau diese Fehlerklasse hat in Vesalo einen
+  // uebersprungenen Deploy lautlos gemacht.
+  //
+  // Deshalb landet jedes ausgelassene Ziel in der Lauf-Zusammenfassung, die
+  // GitHub oben an den Lauf heftet.
+  // ══════════════════════════════════════════════════════════════════════
+  if (uebersprungen.length > 0) {
+    console.warn(`!! ${uebersprungen.length} Ziel(e) UEBERSPRUNGEN (Konfiguration fehlt):`);
+    for (const t of uebersprungen) console.warn(`   - ${t.key}`);
+    await schreibeZusammenfassung(
+      [
+        `## \u26a0\ufe0f ${uebersprungen.length} Ziel(e) uebersprungen`,
+        '',
+        'Diese Ziele wurden **nicht geprueft**, weil ihre Konfiguration fehlt.',
+        'Ein uebersprungenes Ziel ist nicht dasselbe wie ein gesundes.',
+        '',
+        ...uebersprungen.map((t) => `- \`${t.key}\` — ${t.name}`),
+        '',
+        'Fehlende Secrets ergaenzen: `WEBHOOK_PROBE_URL`, `IMMOSPUR_URL`,',
+        '`IMMOSPUR_BENUTZER`, `IMMOSPUR_PASSWORT`.',
+        '',
+      ].join('\n'),
+    );
   }
 
   const results = new Map();

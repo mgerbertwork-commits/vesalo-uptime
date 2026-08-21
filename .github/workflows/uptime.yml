@@ -44,4 +44,13 @@ jobs:
           ALERT_TO: ${{ secrets.ALERT_TO }}
           ALERT_FROM: ${{ secrets.ALERT_FROM }}
           WEBHOOK_PROBE_URL: ${{ secrets.WEBHOOK_PROBE_URL }}
+          # 🔴 Immospur laeuft unter einer NICHT BEWORBENEN Adresse mit
+          # Zugangsabfrage. Dieses Repository ist oeffentlich — Adresse und
+          # Zugangsdaten stehen deshalb ausschliesslich in Secrets und werden
+          # in Issues und Mails ersetzt (`redact` in monitor.mjs).
+          # Fehlen sie, werden die vier Immospur-Ziele uebersprungen — und das
+          # steht dann SICHTBAR in der Lauf-Zusammenfassung.
+          IMMOSPUR_URL: ${{ secrets.IMMOSPUR_URL }}
+          IMMOSPUR_BENUTZER: ${{ secrets.IMMOSPUR_BENUTZER }}
+          IMMOSPUR_PASSWORT: ${{ secrets.IMMOSPUR_PASSWORT }}
           FORCE_FAIL: ${{ inputs.force_fail && '1' || '' }}
