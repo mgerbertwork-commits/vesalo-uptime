@@ -216,7 +216,53 @@ const TARGETS = [
     },
     expectText: 'HTTP 401 der Signaturpruefung (ohne WWW-Authenticate)',
   },
+  ...sicherungsZiele(),
 ];
+
+// ─── Sicherungen beider Produkte ────────────────────────────────────────────
+//
+// 🔴 WARUM DIESE ZIELE DIE WICHTIGSTEN SIND
+//
+// Vesalos DB-Sicherung hat MONATELANG nie funktioniert. Nicht weil sie
+// schwer ist, sondern weil ihr Scheitern nur in ein Protokoll schrieb, das
+// niemand liest — und weil ein Job, der GAR NICHT startet, nicht einmal das
+// tut. Aufgefallen ist es erst, als jemand aus einem anderen Anlass in den
+// R2-Eimer sah. Bis dahin haette ein Datenverlust jede Sicherung gekostet.
+//
+// Beide Produkte legen ihren Sicherungszustand jetzt ab; die Immospur-API
+// liefert ihn aus. Das Ziel prueft ZWEI Dinge auf einmal:
+//   · `gesund: false` → Lauf gescheitert (Grund steht dabei),
+//   · Zeitstempel aelter als 26 h → Lauf ausgeblieben (auch das ist
+//     `gesund: false`, gerechnet wird es serverseitig).
+//
+// ⚠️ Beide haengen an der Immospur-Adresse — auch Vesalos, weil dessen
+// Container Coolify-verwaltet ist und der Coolify-Token seit dem 20.08.2026
+// abgelaufen ist. Faellt der Immospur-Server aus, melden das die drei Ziele
+// darueber. Still wird es also nicht.
+function sicherungsZiele() {
+  return ['immospur', 'vesalo'].map((produkt) => ({
+    key: `sicherung-${produkt}`,
+    name: `Sicherung ${produkt === 'vesalo' ? 'Vesalo' : 'Immospur'} — gelaufen und ausgelagert?`,
+    method: 'GET',
+    url: `${IMMOSPUR_URL}/api/immobilienfinder/sicherungsstand/${produkt}`,
+    skipIf: () => !IMMOSPUR_BEREIT,
+    headers: { authorization: IMMOSPUR_AUTH },
+    // 🔴 Die Route antwortet ABSICHTLICH immer mit 200, auch im Fehlerfall.
+    // Sonst waere „Sicherung kaputt" von „API kaputt" nicht zu unterscheiden.
+    // Der Zustand steht im Body.
+    expect: (r) => r.status === 200 && /"gesund"\s*:\s*true/.test(r.body),
+    expectText: 'HTTP 200 und gesund:true (Lauf ok, ausgelagert, juenger als 26 h)',
+    ursache: (r) => {
+      try {
+        const j = JSON.parse(r.body);
+        const alter = j.alterStunden == null ? '?' : `${j.alterStunden} h alt`;
+        return `${j.grund || j.ergebnis || 'ohne Begruendung'} (${alter})`;
+      } catch {
+        return r.body.slice(0, 200);
+      }
+    },
+  }));
+}
 
 // Selbsttest: ein absichtlich fehlschlagendes Zusatzziel. Erzeugt einen echten
 // Alarm ueber den echten Weg, ohne ueber ein echtes Ziel die Unwahrheit zu sagen.
@@ -270,10 +316,29 @@ async function probe(t) {
     // `headers` mitgeben: manche Ziele beweisen ihre Gesundheit nicht am
     // Body, sondern an einem Antwort-Header (CORS).
     const ok = t.expect({ status: res.status, body, headers: res.headers });
+    // 🔴 Manche Ziele KENNEN ihre Ursache und schreiben sie in den Body.
+    //
+    // Die Sicherungsziele sind der Anlass: „HTTP 200 — erwartet: gesund:true"
+    // sagt einem um 3 Uhr nachts nichts. „pg_dump: connection refused" sagt
+    // alles. Ohne diesen Zweig bliebe die Begruendung im Body liegen und
+    // erreichte die Mail nie.
+    let ursache = '';
+    if (!ok && typeof t.ursache === 'function') {
+      try {
+        ursache = t.ursache({ status: res.status, body, headers: res.headers }) || '';
+      } catch {
+        ursache = '';
+      }
+    }
     return {
       ok,
       ms: Date.now() - started,
-      detail: ok ? `HTTP ${res.status}` : `HTTP ${res.status} — erwartet: ${t.expectText}`,
+      detail: ok
+        ? `HTTP ${res.status}`
+        : redact(
+            `HTTP ${res.status} — erwartet: ${t.expectText}` +
+              (ursache ? ` · Ursache: ${ursache.slice(0, 400)}` : ''),
+          ),
     };
   } catch (e) {
     return { ok: false, ms: Date.now() - started, detail: redact(`${e.name}: ${e.message}`) };
@@ -473,7 +538,7 @@ async function main() {
       body: JSON.stringify({ state: 'closed', state_reason: 'completed' }),
     });
     await sendMail(
-      `✅ Vesalo wieder erreichbar`,
+      `✅ Vesalo wieder unauffaellig`,
       mailHtml(
         'Entwarnung — alle Ziele antworten wieder',
         mailRows,
@@ -492,15 +557,19 @@ async function main() {
     const created = await gh(`/repos/${REPO}/issues`, {
       method: 'POST',
       body: JSON.stringify({
-        title: `🔴 Nicht erreichbar: ${failing.map((t) => t.key).join(', ')} (${now})`,
+        // „Auffaellig" statt „Nicht erreichbar": seit den Sicherungszielen
+        // stimmt das zweite nicht mehr. Die Route ANTWORTET (HTTP 200) und
+        // meldet einen Fehlzustand — „nicht erreichbar" schickte einen um
+        // 3 Uhr nachts als Erstes an den Server, statt an die Sicherung.
+        title: `🔴 Auffaellig: ${failing.map((t) => t.key).join(', ')} (${now})`,
         body: buildIssueBody(state, tableRows),
         labels: [LABEL],
       }),
     });
     await sendMail(
-      `🔴 Vesalo nicht erreichbar: ${failing.map((t) => t.key).join(', ')}`,
+      `🔴 Vesalo auffaellig: ${failing.map((t) => t.key).join(', ')}`,
       mailHtml(
-        `${failing.length} Ziel(e) nicht erreichbar`,
+        `${failing.length} Ziel(e) auffaellig`,
         mailRows,
         `Bestätigt nach ${ATTEMPTS} Versuchen mit ${RETRY_DELAY_MS / 1000}s Abstand. ` +
           `Vorfall: <a href="${created.html_url}">#${created.number}</a>. ` +
