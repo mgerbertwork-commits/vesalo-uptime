@@ -95,18 +95,10 @@ const TARGETS = [
     expect: (r) => r.status === 200 && /<html/i.test(r.body),
     expectText: 'HTTP 200 und HTML-Body',
   },
-  {
-    key: 'webhook',
-    name: 'E-Mail-Webhook (Inbound)',
-    method: 'POST',
-    url: WEBHOOK_PROBE_URL,
-    skipIf: () => !WEBHOOK_PROBE_URL,
-    // 401 ist hier das GESUNDE Ergebnis: die Route lebt und weist unsere
-    // absichtlich fehlenden Zugangsdaten korrekt ab. 404/502/Timeout dagegen
-    // heisst, der Weg von aussen ist gestoert — genau der Fehler von 07/2026.
-    expect: (r) => r.status === 401 && /invalid credentials/i.test(r.body),
-    expectText: 'HTTP 401 mit erwarteter Abweisung (Route lebt)',
-  },
+  // 'webhook' (E-Mail-Webhook Inbound) entfernt am 12.10.2026: Das Postfach
+  // samt Mail-Eingang wurde am 14.09.2026 aus Vesalo ausgebaut (Entscheidung
+  // Mio). Die Route gibt es seitdem absichtlich nicht mehr — das Ziel hielt
+  // einen Dauer-Vorfall (#6) offen und haette echte Ausfaelle ueberdeckt.
   {
     key: 'kontaktformular',
     name: 'Kontaktformular — darf www.vesalo.de absenden?',
@@ -472,8 +464,8 @@ async function main() {
         '',
         ...uebersprungen.map((t) => `- \`${t.key}\` — ${t.name}`),
         '',
-        'Fehlende Secrets ergaenzen: `WEBHOOK_PROBE_URL`, `IMMOSPUR_URL`,',
-        '`IMMOSPUR_BENUTZER`, `IMMOSPUR_PASSWORT`.',
+        'Fehlende Secrets ergaenzen: `IMMOSPUR_URL`, `IMMOSPUR_BENUTZER`,',
+        '`IMMOSPUR_PASSWORT`.',
         '',
       ].join('\n'),
     );
