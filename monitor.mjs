@@ -95,6 +95,27 @@ const TARGETS = [
     expect: (r) => r.status === 200 && /<html/i.test(r.body),
     expectText: 'HTTP 200 und HTML-Body',
   },
+  {
+    // Instagram-Autoposter (Vesalo #682, 26.10.2026). Die Route rechnet selbst:
+    // gesund:false bei Token < 10 Tagen, Erneuerung gescheitert, kein Post seit
+    // 3 Tagen + 6 h oder < 10 geplanten Beiträgen. Dieses Ziel fängt den Fall,
+    // den der Wächter IN der API nicht melden kann: der Zeitplan selbst steht.
+    // Vor der Verbindung (modus nicht-eingerichtet/-verbunden) ist gesund:true.
+    key: 'instagram',
+    name: 'Instagram-Autoposter — postet und ist verbunden?',
+    method: 'GET',
+    url: 'https://www.vesalo.de/api/integrations/instagram/zustand',
+    expect: (r) => r.status === 200 && /"gesund"s*:s*true/.test(r.body),
+    expectText: 'HTTP 200 und gesund:true',
+    ursache: (r) => {
+      try {
+        const j = JSON.parse(r.body);
+        return `${(j.befunde || []).join(' · ') || 'ohne Befund'} (Modus ${j.modus}, geplant ${j.geplant})`;
+      } catch {
+        return r.body.slice(0, 200);
+      }
+    },
+  },
   // 'webhook' (E-Mail-Webhook Inbound) entfernt am 12.10.2026: Das Postfach
   // samt Mail-Eingang wurde am 14.09.2026 aus Vesalo ausgebaut (Entscheidung
   // Mio). Die Route gibt es seitdem absichtlich nicht mehr — das Ziel hielt
