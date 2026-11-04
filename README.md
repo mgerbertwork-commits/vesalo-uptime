@@ -107,3 +107,25 @@ FEHL immospur-api      HTTP 200 — erwartet: … und ein echter 40-stelliger Co
 
 Der Schutz-Waechter schlaegt also an, wenn der Schutz fehlt. Ohne diese Probe
 waere „immer gruen" von „kann gar nicht rot werden" nicht zu unterscheiden.
+
+## Öffentliche Status-Seite — status.vesalo.de (seit 04.11.2026)
+
+`site/` ist eine statische Seite (HTML/CSS/JS, Schriften selbst gehostet,
+keine Cookies, keine Anfragen an Dritte). Workflow **Status-Seite**
+(`.github/workflows/status.yml`) rechnet mit `status/bauen.mjs` die
+`site/daten.json` und veröffentlicht `site/` über GitHub Pages — stündlich
+und sofort nach jeder Vorfall-Änderung (`uptime.yml` stößt ihn an).
+
+- **Datenquelle sind die Vorfall-Issues** (`uptime-incident`): gestört von der
+  Bestätigung bis zur Entwarnung, Teiländerungen aus den
+  „Lage geändert“-Kommentaren. Kein zweiter Speicher, **keine Commits**.
+- 🔴 **Öffentlich ist nur die Positivliste `DIENSTE`** in `status/bauen.mjs`
+  (`www`, `app`, `api`, `kontaktformular`). Immospur-, Sicherungs- und
+  Instagram-Ziele erscheinen nie — weder als Dienst noch in einem Vorfall.
+  Ein neues Ziel taucht erst auf, wenn es dort bewusst eingetragen wird
+  (mit `ab` = erster Prüftag).
+- Tagesgrenzen und Zeiten in Europe/Berlin; Verfügbarkeit auf zwei Stellen
+  **abgerundet**. Vor dem 09.08.2026 gibt es keine Messung (graue Tage).
+- Lokal: `GITHUB_TOKEN=$(gh auth token) GITHUB_REPOSITORY=mgerbertwork-commits/vesalo-uptime node status/bauen.mjs`,
+  dann `site/` mit einem beliebigen statischen Server öffnen.
+- Kosten: ein Job pro Stunde (öffentliches Repo → kostenlos).

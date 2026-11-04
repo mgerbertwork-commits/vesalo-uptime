@@ -1,0 +1,195 @@
+/* Vesalo Systemstatus — Marke: Akzent #0071e3 (dunkel #4ba3ff), Fraunces + Inter.
+   Schriften liegen selbst gehostet unter schriften/ (SIL OFL 1.1) — keine
+   Anfrage an Google oder andere Dritte. */
+
+@font-face {
+  font-family: "Inter";
+  src: url("schriften/inter.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Fraunces";
+  src: url("schriften/fraunces.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --bg: #ffffff;
+  --flaeche: #f5f5f7;
+  --karte: #ffffff;
+  --text: #0a0a0a;
+  --leise: #5f5f66;
+  --linie: rgba(60, 60, 67, 0.14);
+  --akzent: #0071e3;
+  --ok: #177a41;
+  --teil: #c27c00;
+  --stoer: #d1302b;
+  --leer: #c7c7cc;
+  --fokus: #0071e3;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c0c0d;
+    --flaeche: #141416;
+    --karte: #18181b;
+    --text: #f5f5f7;
+    --leise: #a1a1aa;
+    --linie: rgba(235, 235, 245, 0.14);
+    --akzent: #4ba3ff;
+    --ok: #34c56f;
+    --teil: #f0a91c;
+    --stoer: #ff5a52;
+    --leer: #45454c;
+    --fokus: #4ba3ff;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c0c0d;
+  --flaeche: #141416;
+  --karte: #18181b;
+  --text: #f5f5f7;
+  --leise: #a1a1aa;
+  --linie: rgba(235, 235, 245, 0.14);
+  --akzent: #4ba3ff;
+  --ok: #34c56f;
+  --teil: #f0a91c;
+  --stoer: #ff5a52;
+  --leer: #45454c;
+  --fokus: #4ba3ff;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 400 16px/1.6 "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-feature-settings: "cv11", "ss01";
+}
+a { color: var(--akzent); text-underline-offset: 2px; }
+a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--fokus);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+.rahmen { max-width: 760px; margin: 0 auto; padding: 0 16px; }
+
+.sprungmarke {
+  position: absolute; left: 16px; top: -48px;
+  background: var(--text); color: var(--bg);
+  padding: 8px 12px; border-radius: 8px; z-index: 10;
+}
+.sprungmarke:focus { top: 12px; }
+
+/* Kopf */
+.kopf { border-bottom: 1px solid var(--linie); }
+.kopf-innen { display: flex; align-items: center; gap: 12px; min-height: 64px; }
+.marke {
+  font-family: "Fraunces", Georgia, serif; font-weight: 600; font-size: 24px;
+  color: var(--text); text-decoration: none; letter-spacing: -0.01em;
+}
+.kopf-titel { color: var(--leise); font-size: 16px; padding-left: 12px; border-left: 1px solid var(--linie); }
+.sprache { margin-left: auto; font-size: 15px; }
+
+main.rahmen { padding-top: 40px; padding-bottom: 48px; }
+h1, h2 { font-family: "Fraunces", Georgia, serif; font-weight: 600; letter-spacing: -0.015em; }
+h2 { font-size: 22px; margin: 0; }
+
+/* Gesamtstatus */
+.gesamt {
+  display: flex; gap: 16px; align-items: flex-start;
+  padding: 24px; border-radius: 16px;
+  background: var(--flaeche); border: 1px solid var(--linie);
+}
+.gesamt h1 { font-size: clamp(26px, 5vw, 34px); line-height: 1.2; margin: 0; }
+.gesamt .stand { margin: 6px 0 0; color: var(--leise); font-size: 15px; }
+.punkt {
+  flex: none; width: 18px; height: 18px; margin-top: 10px; border-radius: 50%;
+  background: var(--leer);
+}
+.gesamt[data-zustand="ok"] .punkt { background: var(--ok); box-shadow: 0 0 0 6px color-mix(in srgb, var(--ok) 18%, transparent); }
+.gesamt[data-zustand="stoer"] .punkt { background: var(--stoer); box-shadow: 0 0 0 6px color-mix(in srgb, var(--stoer) 18%, transparent); }
+.gesamt[data-zustand="stoer"] { border-color: color-mix(in srgb, var(--stoer) 45%, transparent); }
+
+.hinweis {
+  margin: 16px 0 0; padding: 12px 16px; border-radius: 12px;
+  background: color-mix(in srgb, var(--teil) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--teil) 40%, transparent);
+}
+
+section + section { margin-top: 48px; }
+.abschnitt-kopf { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 48px; }
+.zeitraum { color: var(--leise); font-size: 15px; }
+
+/* Dienste */
+.dienste { list-style: none; margin: 16px 0 0; padding: 0; border: 1px solid var(--linie); border-radius: 16px; background: var(--karte); }
+.dienst { padding: 20px; }
+.dienst + .dienst { border-top: 1px solid var(--linie); }
+.dienst-kopf { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.dienst-name { font-weight: 600; font-size: 17px; }
+.dienst-adresse { color: var(--leise); font-size: 15px; }
+.dienst-zustand { margin-left: auto; font-weight: 500; font-size: 15px; color: var(--ok); }
+.dienst-zustand.stoer { color: var(--stoer); }
+.leiste {
+  display: grid; grid-template-columns: repeat(90, 1fr); gap: 2px;
+  height: 34px; margin-top: 14px;
+}
+.leiste span { border-radius: 2px; background: var(--leer); min-width: 0; }
+.leiste .ok { background: var(--ok); }
+.leiste .teil { background: var(--teil); }
+.leiste .stoer { background: var(--stoer); }
+.leiste span:hover { opacity: 0.7; }
+.dienst-fuss { display: flex; justify-content: space-between; gap: 12px; margin-top: 8px; color: var(--leise); font-size: 14px; }
+.dienst-fuss strong { color: var(--text); font-weight: 600; }
+
+.legende { list-style: none; display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 14px 0 0; padding: 0; color: var(--leise); font-size: 14px; }
+.legende li { display: flex; align-items: center; gap: 8px; }
+.feld { width: 12px; height: 12px; border-radius: 3px; background: var(--leer); }
+.feld.ok { background: var(--ok); } .feld.teil { background: var(--teil); } .feld.stoer { background: var(--stoer); }
+
+/* Vorfaelle */
+.vorfaelle { list-style: none; margin: 16px 0 0; padding: 0; }
+.vorfall { padding: 16px 0; border-top: 1px solid var(--linie); }
+.vorfall:last-child { border-bottom: 1px solid var(--linie); }
+.vorfall-titel { font-weight: 600; }
+.vorfall-zeit { color: var(--leise); font-size: 15px; }
+.leer-text { color: var(--leise); }
+
+.methode p { color: var(--leise); max-width: 64ch; }
+.methode h2 { margin-bottom: 8px; }
+
+/* Fuss */
+.fuss { border-top: 1px solid var(--linie); background: var(--flaeche); color: var(--leise); font-size: 15px; }
+.fuss-innen { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: center; padding-top: 24px; padding-bottom: 24px; }
+.fuss nav { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+.fuss-klein { flex-basis: 100%; margin: 0; font-size: 14px; }
+
+/* Tooltip (nur Maus/Touch-Zusatz; dieselbe Auskunft steht als Text im aria-label) */
+.tipp {
+  position: fixed; z-index: 20; pointer-events: none;
+  max-width: 260px; padding: 8px 12px; border-radius: 10px;
+  background: var(--text); color: var(--bg); font-size: 14px; line-height: 1.4;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+}
+
+@media (max-width: 560px) {
+  main.rahmen { padding-top: 24px; }
+  .leiste { gap: 1px; height: 30px; }
+  .gesamt { padding: 18px; }
+  .dienst { padding: 16px; }
+  .kopf-titel { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+@media (forced-colors: active) {
+  .leiste span, .feld, .punkt { forced-color-adjust: none; }
+}

@@ -25,6 +25,8 @@ concurrency:
 permissions:
   contents: read
   issues: write
+  # Nur um bei einer Vorfall-Aenderung die Status-Seite sofort neu zu bauen.
+  actions: write
 
 jobs:
   check:
@@ -37,6 +39,7 @@ jobs:
         with:
           node-version: 22
       - name: Ziele prüfen
+        id: pruefen
         run: node monitor.mjs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -54,3 +57,12 @@ jobs:
           IMMOSPUR_BENUTZER: ${{ secrets.IMMOSPUR_BENUTZER }}
           IMMOSPUR_PASSWORT: ${{ secrets.IMMOSPUR_PASSWORT }}
           FORCE_FAIL: ${{ inputs.force_fail && '1' || '' }}
+      # Vorfall geoeffnet, geaendert oder geschlossen → Status-Seite sofort neu
+      # bauen statt erst beim naechsten Stundenlauf. Scheitert das, bleibt der
+      # Waechter trotzdem gruen; der Stundenlauf holt es nach.
+      - name: Status-Seite anstossen
+        if: steps.pruefen.outputs.geaendert == 'true'
+        continue-on-error: true
+        run: gh workflow run status.yml --repo "$GITHUB_REPOSITORY" --ref main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

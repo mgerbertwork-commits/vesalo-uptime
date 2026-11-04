@@ -373,6 +373,19 @@ async function schreibeZusammenfassung(text) {
   await appendFile(ziel, redact(text) + '\n');
 }
 
+/**
+ * Meldet dem Workflow, dass sich der Vorfall-Zustand geaendert hat. Der
+ * naechste Schritt stoesst dann sofort den Neubau der Status-Seite an
+ * (status.vesalo.de) — sonst saehe man einen Ausfall erst beim stuendlichen
+ * Lauf. Ohne GITHUB_OUTPUT (lokal) passiert nichts.
+ */
+async function meldeAenderung() {
+  const ziel = process.env.GITHUB_OUTPUT;
+  if (!ziel || DRY_RUN) return;
+  const { appendFile } = await import('node:fs/promises');
+  await appendFile(ziel, 'geaendert=true\n');
+}
+
 // ─── GitHub-API ──────────────────────────────────────────────────────────────
 async function gh(path, init = {}) {
   if (DRY_RUN) {
@@ -561,6 +574,7 @@ async function main() {
       ),
     );
     console.log(`Vorfall #${incident.number} geschlossen, Entwarnung verschickt.`);
+    await meldeAenderung();
     return;
   }
 
@@ -591,6 +605,7 @@ async function main() {
       ),
     );
     console.log(`Vorfall #${created.number} angelegt, Alarm verschickt.`);
+    await meldeAenderung();
     return;
   }
 
@@ -636,6 +651,7 @@ async function main() {
       ),
     );
   }
+  await meldeAenderung();
   console.log(`Vorfall #${incident.number} aktualisiert (neu: ${neu.join(',') || '—'}, behoben: ${behoben.join(',') || '—'}).`);
 }
 

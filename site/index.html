@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vesalo Systemstatus</title>
+  <meta name="description" content="Aktueller Betriebszustand von Website, App und Schnittstelle der Vesalo Hausverwaltung, mit Verfügbarkeit der letzten 90 Tage.">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0c0c0d" media="(prefers-color-scheme: dark)">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="schriften/inter.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="stil.css">
+</head>
+<body>
+  <a class="sprungmarke" href="#inhalt" data-t="skip">Zum Inhalt springen</a>
+  <header class="kopf">
+    <div class="rahmen kopf-innen">
+      <a class="marke" href="https://www.vesalo.de/" aria-label="Vesalo – zur Website">Vesalo</a>
+      <span class="kopf-titel" data-t="title">Systemstatus</span>
+      <a class="sprache" id="sprache" href="?lang=en" hreflang="en" lang="en">English</a>
+    </div>
+  </header>
+
+  <main id="inhalt" class="rahmen">
+    <section class="gesamt" id="gesamt" data-zustand="laden" aria-live="polite">
+      <span class="punkt" aria-hidden="true"></span>
+      <div>
+        <h1 id="gesamt-text" data-t="loading">Status wird geladen …</h1>
+        <p class="stand" id="stand"></p>
+      </div>
+    </section>
+    <p class="hinweis" id="veraltet" hidden></p>
+
+    <noscript>
+      <p class="hinweis">Für die Anzeige wird JavaScript benötigt. Die Rohdaten stehen unter <a href="daten.json">daten.json</a>.</p>
+    </noscript>
+
+    <section aria-labelledby="dienste-titel">
+      <div class="abschnitt-kopf">
+        <h2 id="dienste-titel" data-t="services">Dienste</h2>
+        <span class="zeitraum" data-t="range">Letzte 90 Tage</span>
+      </div>
+      <ul class="dienste" id="dienste"></ul>
+      <ul class="legende" aria-label="Legende" data-t-label="legend">
+        <li><span class="feld ok" aria-hidden="true"></span><span data-t="legOk">Ohne Störung</span></li>
+        <li><span class="feld teil" aria-hidden="true"></span><span data-t="legMinor">Kurze Störung (unter 1 Std.)</span></li>
+        <li><span class="feld stoer" aria-hidden="true"></span><span data-t="legMajor">Störung (ab 1 Std.)</span></li>
+        <li><span class="feld leer" aria-hidden="true"></span><span data-t="legNone">Keine Messung</span></li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="vorfaelle-titel">
+      <h2 id="vorfaelle-titel" data-t="incidents">Störungen der letzten 90 Tage</h2>
+      <ul class="vorfaelle" id="vorfaelle"></ul>
+    </section>
+
+    <section class="methode" aria-labelledby="methode-titel">
+      <h2 id="methode-titel" data-t="howTitle">So messen wir</h2>
+      <p data-t="how1">Ein unabhängiger Wächter prüft alle fünf Minuten von außerhalb unserer Server, ob Website, App, Schnittstelle und Kontaktformular richtig antworten – nicht nur, ob sie erreichbar sind. Als Störung zählt ein Dienst erst, wenn drei Prüfungen in Folge fehlschlagen; gemessen wird ab dieser Bestätigung bis zur Entwarnung.</p>
+      <p data-t="how2">Alle Zeiten in deutscher Zeit (Europe/Berlin). Die Seite wird stündlich und bei jeder Statusänderung neu erzeugt.</p>
+    </section>
+  </main>
+
+  <footer class="fuss">
+    <div class="rahmen fuss-innen">
+      <span>© <span id="jahr">2026</span> Vesalo UG (haftungsbeschränkt)</span>
+      <nav aria-label="Rechtliches" data-t-label="legal">
+        <a href="https://www.vesalo.de/impressum" data-t="imprint">Impressum</a>
+        <a href="https://www.vesalo.de/datenschutz" data-t="privacy">Datenschutz</a>
+        <a href="https://www.vesalo.de/" data-t="website">Zur Website</a>
+      </nav>
+      <p class="fuss-klein" data-t="noTracking">Diese Seite setzt keine Cookies, nutzt keine Analyse-Werkzeuge und lädt nichts von Dritten.</p>
+    </div>
+  </footer>
+
+  <div class="tipp" id="tipp" role="tooltip" hidden></div>
+  <script src="status.js" defer></script>
+</body>
+</html>

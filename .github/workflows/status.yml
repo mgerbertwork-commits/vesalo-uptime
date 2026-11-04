@@ -1,0 +1,54 @@
+name: Status-Seite
+
+# Baut die oeffentliche Status-Seite (status.vesalo.de) und veroeffentlicht sie
+# ueber GitHub Pages. Die Zahlen kommen aus den Vorfall-Issues des Waechters
+# (status/bauen.mjs) — es wird NICHTS ins Repo committet.
+#
+# Takt: stuendlich, plus sofort, wenn der Waechter einen Vorfall oeffnet,
+# aendert oder schliesst (uptime.yml stoesst diesen Workflow dann an).
+# Oeffentliches Repo = Standard-Runner kostenlos; trotzdem ein einziger Job.
+on:
+  schedule:
+    - cron: '23 * * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'site/**'
+      - 'status/**'
+      - '.github/workflows/status.yml'
+
+permissions:
+  contents: read
+  issues: read
+  actions: read
+  pages: write
+  id-token: write
+
+# Nie zwei Veroeffentlichungen gleichzeitig; eine laufende wird nicht
+# abgebrochen (die naechste bringt ohnehin den neueren Stand).
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  veroeffentlichen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Daten aus den Vorfall-Issues berechnen
+        run: node status/bauen.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4
