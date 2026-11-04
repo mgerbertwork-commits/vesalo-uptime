@@ -10,7 +10,7 @@
       legOk: 'Ohne Störung', legMinor: 'Kurze Störung (unter 1 Std.)', legMajor: 'Störung (ab 1 Std.)', legNone: 'Keine Messung',
       incidents: 'Störungen der letzten 90 Tage',
       howTitle: 'So messen wir',
-      how1: 'Ein unabhängiger Wächter prüft alle fünf Minuten von außerhalb unserer Server, ob Website, App, Schnittstelle und Kontaktformular richtig antworten – nicht nur, ob sie erreichbar sind. Als Störung zählt ein Dienst erst, wenn drei Prüfungen in Folge fehlschlagen; gemessen wird ab dieser Bestätigung bis zur Entwarnung.',
+      how1: 'Ein unabhängiger Wächter prüft von außerhalb unserer Server, ob Website, App, Schnittstelle und Kontaktformular richtig antworten – nicht nur, ob sie erreichbar sind. Er läuft auf GitHub; geplante Läufe führt GitHub nach freier Kapazität aus, derzeit etwa alle drei bis vier Stunden. Als Störung zählt ein Dienst, wenn drei Versuche im Abstand von 20 Sekunden fehlschlagen; gemessen wird ab dieser Bestätigung bis zur Entwarnung. Kurze Störungen zwischen zwei Läufen kann diese Seite deshalb übersehen.',
       how2: 'Alle Zeiten in deutscher Zeit (Europe/Berlin). Die Seite wird stündlich und bei jeder Statusänderung neu erzeugt.',
       imprint: 'Impressum', privacy: 'Datenschutz', website: 'Zur Website', legal: 'Rechtliches',
       noTracking: 'Diese Seite setzt keine Cookies, nutzt keine Analyse-Werkzeuge und lädt nichts von Dritten.',
@@ -20,7 +20,7 @@
       failedHint: 'Bitte laden Sie die Seite in einigen Minuten neu.',
       asOf: function (z) { return 'Stand: ' + z + ' Uhr'; },
       lastCheck: function (z) { return 'letzte Prüfung ' + z + ' Uhr'; },
-      stale: 'Die letzte Prüfung liegt länger als zwei Stunden zurück. Die Anzeige kann veraltet sein.',
+      stale: 'Die letzte Prüfung liegt länger als sechs Stunden zurück. Die Anzeige kann veraltet sein.',
       stateOk: 'Läuft', stateBad: 'Gestört',
       availability: function (p) { return p + ' % verfügbar'; },
       ago: 'vor 90 Tagen', today: 'Heute', noData: 'Keine Messung',
@@ -42,7 +42,7 @@
       legOk: 'No disruption', legMinor: 'Short disruption (under 1 h)', legMajor: 'Disruption (1 h or more)', legNone: 'No measurement',
       incidents: 'Disruptions in the last 90 days',
       howTitle: 'How we measure',
-      how1: 'An independent monitor checks every five minutes, from outside our servers, whether the website, app, API and contact form respond correctly – not just whether they are reachable. A service only counts as disrupted after three checks in a row fail; the disruption is measured from that confirmation until recovery.',
+      how1: 'An independent monitor checks, from outside our servers, whether the website, app, API and contact form respond correctly – not just whether they are reachable. It runs on GitHub, which executes scheduled runs as capacity allows – currently about every three to four hours. A service counts as disrupted when three attempts 20 seconds apart fail; the disruption is measured from that confirmation until recovery. Short disruptions between two runs may therefore be missed here.',
       how2: 'All times in German time (Europe/Berlin). The page is regenerated every hour and on every status change.',
       imprint: 'Legal notice', privacy: 'Privacy', website: 'Website', legal: 'Legal',
       noTracking: 'This page sets no cookies, uses no analytics and loads nothing from third parties.',
@@ -52,7 +52,7 @@
       failedHint: 'Please reload the page in a few minutes.',
       asOf: function (z) { return 'As of ' + z; },
       lastCheck: function (z) { return 'last check ' + z; },
-      stale: 'The last check was more than two hours ago. This page may be out of date.',
+      stale: 'The last check was more than six hours ago. This page may be out of date.',
       stateOk: 'Operational', stateBad: 'Disrupted',
       availability: function (p) { return p + ' % uptime'; },
       ago: '90 days ago', today: 'Today', noData: 'No measurement',
@@ -155,7 +155,7 @@
     var stand = T.asOf(fmtZeit.format(new Date(d.erzeugt)));
     if (d.letztePruefung) stand += ' · ' + T.lastCheck(fmtUhr.format(new Date(d.letztePruefung)));
     $('stand').textContent = stand;
-    if (d.letztePruefung && Date.now() - Date.parse(d.letztePruefung) > 2 * 3600 * 1000) {
+    if (d.letztePruefung && Date.now() - Date.parse(d.letztePruefung) > 6 * 3600 * 1000) {
       $('veraltet').textContent = T.stale;
       $('veraltet').hidden = false;
     }

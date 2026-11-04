@@ -129,3 +129,9 @@ und sofort nach jeder Vorfall-Änderung (`uptime.yml` stößt ihn an).
 - Lokal: `GITHUB_TOKEN=$(gh auth token) GITHUB_REPOSITORY=mgerbertwork-commits/vesalo-uptime node status/bauen.mjs`,
   dann `site/` mit einem beliebigen statischen Server öffnen.
 - Kosten: ein Job pro Stunde (öffentliches Repo → kostenlos).
+- 🔴 **Gemessen 04.11.2026: `*/5` heißt hier nicht „alle 5 Minuten“.** GitHub
+  hat `uptime.yml` seit September nur 4–8-mal pro Tag ausgeführt (12.08.: 21,
+  29.10.–04.11.: 3–5). Kurze Ausfälle zwischen zwei Läufen sieht der Wächter
+  nicht. Die Seite sagt das offen („etwa alle drei bis vier Stunden“) und
+  warnt erst ab 6 h ohne Lauf. Wer echte 5-Minuten-Auflösung will, braucht
+  einen anderen Taktgeber — Entscheidung offen.
