@@ -1,13 +1,15 @@
 name: Uptime
 
 on:
-  # Alle 5 Minuten — das ist die feinste Auflösung, die GitHub anbietet.
-  # Dieses Repo ist öffentlich, dort sind Actions-Minuten auf Standard-Runnern
-  # kostenlos. Das Minuten-Budget des privaten Hauptrepos (E2E!) wird also
-  # NICHT angetastet. GitHub führt geplante Läufe „best effort" aus; unter Last
-  # kann ein Lauf ausfallen oder sich verschieben.
+  # Gemessen 04.11.2026: GitHub startet einen '*/5'-Zeitplan real nur 3–5× am
+  # Tag. Deshalb läuft der Wächter jetzt als Dauerlauf: ein Lauf prüft
+  # 5 h 45 min lang alle 5 Minuten. Alle 3 Stunden wird ein neuer Lauf
+  # angestoßen; über die concurrency-Gruppe wartet er, bis der laufende fertig
+  # ist, und übernimmt dann nahtlos. Fällt ein Start aus, deckt der nächste
+  # die Lücke. Öffentliches Repo → Actions-Minuten kostenlos, das Budget des
+  # privaten Hauptrepos wird nicht angetastet.
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '7 */3 * * *'
   # Selbsttest und Nachprüfung von Hand.
   workflow_dispatch:
     inputs:
@@ -31,17 +33,46 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
-    # Worst case: 3 Versuche × 20 s Timeout + 2 × 20 s Pause ≈ 100 s.
-    timeout-minutes: 6
+    # Dauerlauf 345 min + Puffer; GitHub-Grenze je Job: 360 min.
+    timeout-minutes: 355
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
           node-version: 22
+      # Von Hand (workflow_dispatch) genau eine Prüfung, geplant der Dauerlauf.
+      # Jede Runde schreibt in eine eigene Ausgabedatei; meldet sie
+      # „geaendert", wird die Status-Seite sofort neu gebaut. Ein interner
+      # Fehler des Wächters bricht die Schleife nicht ab, macht den Lauf am
+      # Ende aber rot (GitHub mailt dann von sich aus).
       - name: Ziele prüfen
         id: pruefen
-        run: node monitor.mjs
+        shell: bash
+        run: |
+          set -u
+          ende=$(( $(date +%s) + ${DAUER_MINUTEN} * 60 ))
+          fehler=0
+          runde=0
+          while :; do
+            runde=$((runde + 1))
+            aus=$(mktemp)
+            echo "::group::Runde ${runde} ($(TZ=Europe/Berlin date '+%d.%m. %H:%M'))"
+            GITHUB_OUTPUT="$aus" node monitor.mjs || fehler=1
+            echo "::endgroup::"
+            if grep -q '^geaendert=true' "$aus"; then
+              echo "geaendert=true" >> "$GITHUB_OUTPUT"
+              gh workflow run status.yml --repo "$GITHUB_REPOSITORY" --ref main || true
+            fi
+            rm -f "$aus"
+            [ "$(date +%s)" -lt "$((ende - 300))" ] || break
+            # bis zur nächsten vollen 5-Minuten-Marke schlafen
+            sleep $(( 300 - $(date +%s) % 300 ))
+          done
+          echo "${runde} Runden geprüft."
+          exit "$fehler"
         env:
+          DAUER_MINUTEN: ${{ github.event_name == 'schedule' && '345' || '0' }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           ALERT_TO: ${{ secrets.ALERT_TO }}
@@ -57,12 +88,3 @@ jobs:
           IMMOSPUR_BENUTZER: ${{ secrets.IMMOSPUR_BENUTZER }}
           IMMOSPUR_PASSWORT: ${{ secrets.IMMOSPUR_PASSWORT }}
           FORCE_FAIL: ${{ inputs.force_fail && '1' || '' }}
-      # Vorfall geoeffnet, geaendert oder geschlossen → Status-Seite sofort neu
-      # bauen statt erst beim naechsten Stundenlauf. Scheitert das, bleibt der
-      # Waechter trotzdem gruen; der Stundenlauf holt es nach.
-      - name: Status-Seite anstossen
-        if: steps.pruefen.outputs.geaendert == 'true'
-        continue-on-error: true
-        run: gh workflow run status.yml --repo "$GITHUB_REPOSITORY" --ref main
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

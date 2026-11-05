@@ -132,6 +132,9 @@ und sofort nach jeder Vorfall-Änderung (`uptime.yml` stößt ihn an).
 - 🔴 **Gemessen 04.11.2026: `*/5` heißt hier nicht „alle 5 Minuten“.** GitHub
   hat `uptime.yml` seit September nur 4–8-mal pro Tag ausgeführt (12.08.: 21,
   29.10.–04.11.: 3–5). Kurze Ausfälle zwischen zwei Läufen sieht der Wächter
-  nicht. Die Seite sagt das offen („etwa alle drei bis vier Stunden“) und
-  warnt erst ab 6 h ohne Lauf. Wer echte 5-Minuten-Auflösung will, braucht
-  einen anderen Taktgeber — Entscheidung offen.
+  nicht. **Seit 05.11.2026 (Mio: „bau die 5-Minuten-Prüfung“) läuft
+  `uptime.yml` deshalb als Dauerlauf:** ein Lauf prüft 345 min lang alle
+  5 Minuten, Start alle 3 h (`7 */3 * * *`); über die concurrency-Gruppe
+  `uptime` wartet der nächste Start, bis der laufende fertig ist, und
+  übernimmt nahtlos. Fällt ein Start aus, schließt der nächste die Lücke.
+  Von Hand (`workflow_dispatch`) gibt es genau eine Prüfrunde.
