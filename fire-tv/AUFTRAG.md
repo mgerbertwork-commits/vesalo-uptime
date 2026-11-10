@@ -10,9 +10,8 @@ einmal am Tag GitHub-Releases nach Updates ab.
 ```text
 Richte meinen Fire TV Stick HD (Fire OS 7.7.1.7, IP 192.168.2.73) ein. ADB-Debugging ist an.
 
-1. Klone https://github.com/dyascj/FireFrame, checke Commit a5ec3a1 aus und wende mit
-   "git am" beide Patches aus fire-tv/ in diesem vesalo-uptime-Repo an
-   (Zweig claude/fire-tv-debloat-launcher-xi3z91).
+1. Klone https://github.com/dyascj/FireFrame in einen Unterordner, checke Commit a5ec3a1 aus
+   und wende mit "git am" die beiden .patch-Dateien aus DIESEM Ordner an (0001, dann 0002).
 2. Installiere, was fehlt: adb (Android platform-tools), Java 17 (nicht 21: d8 bricht mit 21 ab),
    Android SDK mit "platforms;android-34" und "build-tools;34.0.0". Unter Windows die .sh-Skripte
    in Git Bash ausführen.
